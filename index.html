@@ -29,13 +29,14 @@
 		.tab-content { background:  #816d65; border-radius: 6px; border-top-left-radius: 0px; padding: 1rem }
 		.tab-options { display: flex; gap: 1rem; align-items: center; margin-left: 1rem; width: 100% }
 		.tab-option { background: #816d65; padding: 6px 8px; border: none; color: #ffffff; border-radius: 6px; height: min-content; cursor: pointer; user-select: none; }
-		.tab-progress { margin-left: auto; }
+		.tab-progress { margin-left: auto; background: #5C946E; }
+		.options-small { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
         .particle { position: absolute; border-radius: 50%; pointer-events: none; animation: particleFloat 3s ease-out forwards; }
 		.star-particle { position: absolute; pointer-events: none; animation: starTwinkle 1.5s ease-out forwards; }
 		#bannerListHardmode { display: none }
-		#victory { position: absolute; top: 50%; left: 50%; background: #5C946E; color: #ffffff; font-size: 64px; border-radius: 6px; padding: 2rem; transform: translate(-50%, -50%); display: none }
+		#victory { position: absolute; top: 50%; left: 50%; background: #5C946E; color: #ffffff; font-size: 64px; border-radius: 6px; padding: 2rem; transform: translate(-50%, -50%); text-align: center; display: none }
         @keyframes starTwinkle { 0% { transform: scale(0) rotate(0deg); opacity: 1; } 50% { transform: scale(1.5) rotate(180deg); opacity: 1; } 100% { transform: scale(0) rotate(360deg); opacity: 0; }}
-        @keyframes particleFloat {0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }}	
+        @keyframes particleFloat {0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }}
 	</style>
 </head>
 <body>
@@ -43,6 +44,7 @@
 		<h1>Terraria Banner Challenge Tracker <span style="font-size: 12px">By midwinter</span></h1>
 	</div>
 	<div class="banners">
+		<div class="options-small"></div>
 		<div class="tab-view">
 			<div class="tab-menu">
 				<div class="tab-button active">Pre-Hardmode</div>
@@ -55,7 +57,7 @@
 					<button class="tab-option" onclick="loadBackup()">Load Backup</button>
 					<button class="tab-option" onclick="clearCollection()">Clear all data</button>
 					<div class="tab-option tab-progress">
-						<span id="banner-count-done">0</span> of <span id="banner-count">0</span> banners completed
+						<span id="banner-count-done">0</span> of <span id="banner-count">0</span>
 					</div>
 				</div>
 			</div>
@@ -75,10 +77,16 @@
 		const count_done_span = document.getElementById('banner-count-done');
 		const hide_complete = document.getElementById('toggle-hide-complete');
 		const saved = JSON.parse(localStorage.getItem("terrariaBanners") || "{}");
+		const mq = window.matchMedia("(max-width: 1042px)");
+		const options = document.querySelector(".tab-options");
+		const option_children = Array.from(options.children).slice(0, -1);
 
 		let count_total = 0;
 		let count_done = 0;
 		let play_victory = false;
+
+		handleLayoutChange(mq);
+		mq.addEventListener("change", handleLayoutChange);
 
 		const grouped = {};
 		const grouped_hardmode = {};
@@ -429,6 +437,19 @@
 			document.body.appendChild(star);
 			setTimeout(() => star.remove(), 1500);
         }
+
+		function handleLayoutChange(e) {
+			const mobileContainer = document.querySelector(".options-small");
+
+			if(e.matches) {
+				option_children.forEach(child => mobileContainer.appendChild(child));
+			} else {
+				const anchor = options.lastElementChild;
+				option_children.forEach(child => {
+					options.insertBefore(child, anchor);
+				});
+			}
+		}
 
 	</script>
 </body>
