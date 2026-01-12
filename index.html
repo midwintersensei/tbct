@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>Terraria Banner Challenge Tracker</title>
+	<style>
+		body { background: #38312e; color: #fff; font-family: Arial, sans-serif; font-size: 14px; padding: 0px; margin: 0px; }
+		button:hover { filter: brightness(1.1) }
+		button:active { filter: brightness(0.95) }
+		h1 { display: inline-block; }
+		h3 { display: inline-block; }
+		a { color: #2EED52 }
+		label { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; padding: .5rem; background: #5a433a; border-radius: 6px; cursor: pointer; border: 1px solid #c6aa9f }
+		label:hover { filter: brightness(1.1) }
+		label > span:nth-last-child(2) { margin-left: auto }
+		input[type="file"] { display: none; }
+		input[type="text"] { background: transparent; border: none; color: #fff }
+		input[type="text"]:focus-within { outline: none }
+		input[type="text"]::placeholder { color: #eee }
+		.banners { padding: 1rem }
+		.banner-list { columns: 2 250px; column-gap: 40px; align-content: top; }
+		.banner-list > div { break-inside: avoid; }
+		.top { background: radial-gradient(circle at left, transparent 0%, rgba(18, 234, 234, .5) 100%), linear-gradient(180deg, #1a0a2e 0%, #0d2137 70%); padding: 1rem; border-bottom: 1px solid #67534c }
+		.tab-menu { display: flex; gap: 8px; }
+		.tab-button { background: #67534c; box-sizing: border-box; height: 50px; min-width: max-content; padding: 1rem; border-top-left-radius: 6px;; border-top-right-radius: 6px; cursor: pointer; font-weight: bold; user-select: none; }
+		.tab-button.active { background: #816d65; }
+		.tab-button:hover { filter: brightness(1.1) }
+		.tab-content { background:  #816d65; border-radius: 6px; border-top-left-radius: 0px; padding: 1rem }
+		.tab-options { display: flex; gap: 1rem; align-items: center; margin-left: 1rem; width: 100% }
+		.tab-option { background: #816d65; padding: 6px 8px; border: none; color: #ffffff; border-radius: 6px; height: min-content; cursor: pointer; user-select: none; }
+		.tab-progress { margin-left: auto; }
+        .particle { position: absolute; border-radius: 50%; pointer-events: none; animation: particleFloat 3s ease-out forwards; }
+		.star-particle { position: absolute; pointer-events: none; animation: starTwinkle 1.5s ease-out forwards; }
+		#bannerListHardmode { display: none }
+		#victory { position: absolute; top: 50%; left: 50%; background: #5C946E; color: #ffffff; font-size: 64px; border-radius: 6px; padding: 2rem; transform: translate(-50%, -50%); display: none }
+        @keyframes starTwinkle { 0% { transform: scale(0) rotate(0deg); opacity: 1; } 50% { transform: scale(1.5) rotate(180deg); opacity: 1; } 100% { transform: scale(0) rotate(360deg); opacity: 0; }}
+        @keyframes particleFloat {0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }}	
+	</style>
+</head>
+<body>
+	<div class="top">
+		<h1>Terraria Banner Challenge Tracker <span style="font-size: 12px">By midwinter</span></h1>
+	</div>
+	<div class="banners">
+		<div class="tab-view">
+			<div class="tab-menu">
+				<div class="tab-button active">Pre-Hardmode</div>
+				<div class="tab-button">Hardmode</div>
+				<div class="tab-options">
+					<div class="tab-option"><input type="text" id="filter" placeholder="Filter..." /></div>
+					<div class="tab-option"><input type="checkbox" id="toggle-hide-complete" /> Hide complete</div>
+					<button class="tab-option" onclick="downloadCollection()">Save Backup</button>
+					<input type="file" id="fileInput" accept=".txt">
+					<button class="tab-option" onclick="loadBackup()">Load Backup</button>
+					<button class="tab-option" onclick="clearCollection()">Clear all data</button>
+					<div class="tab-option tab-progress">
+						<span id="banner-count-done">0</span> of <span id="banner-count">0</span> banners completed
+					</div>
+				</div>
+			</div>
+			<div class="tab-content">
+				<div class="banner-list" id="bannerList"></div>
+				<div class="banner-list" id="bannerListHardmode"></div>
+			</div>
+		</div>
+	</div>
+	<div id="victory">Challenge complete!</div>
+
+	<script>
+		const data = {"Alien Hornet Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Alien Larva Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Alien Queen Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Angler Fish Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Angry Bones Banner":{"hardmode":false,"kills_required":50,"category":"Dungeon"},"Angry Dandelion Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Angry Nimbus Banner":{"hardmode":true,"kills_required":50,"category":"Rain"},"Angry Trapper Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Angry Tumbler Banner":{"hardmode":false,"kills_required":50,"category":"Sandstorm"},"Anomura Fungus Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Antlion Banner":{"hardmode":false,"kills_required":50,"category":"Desert"},"Antlion Charger Banner":{"hardmode":false,"kills_required":50,"category":"Desert"},"Antlion Larva Banner":{"hardmode":false,"kills_required":50,"category":"Desert"},"Antlion Swarmer Banner":{"hardmode":false,"kills_required":50,"category":"Desert"},"Arapaima Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Armored Skeleton Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Armored Viking Banner":{"hardmode":true,"kills_required":50,"category":"Snow"},"Basilisk Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Bird Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Black Recluse Banner":{"hardmode":true,"kills_required":50,"category":"Spiders"},"Black Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Blood Crawler Banner":{"hardmode":false,"kills_required":50,"category":"Crimson"},"Blood Eel Banner":{"hardmode":true,"kills_required":25,"category":"Blood Moon"},"Blood Feeder Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Blood Jelly Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Blood Mummy Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Blood Squid Banner":{"hardmode":true,"kills_required":50,"category":"Blood Moon"},"Blood Zombie Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Blue Armored Bones Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Blue Cultist Archer Banner":{"hardmode":true,"kills_required":25,"category":"Lunar"},"Blue Jellyfish Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Blue Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Bone Biter Banner":{"hardmode":true,"kills_required":50,"category":"Sandstorm"},"Bone Lee Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Bone Serpent Banner":{"hardmode":false,"kills_required":50,"category":"Underworld"},"Brain Suckler Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Bunny Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Butcher Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Cave Bat Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Chaos Elemental Banner":{"hardmode":true,"kills_required":50,"category":"Hallow"},"Clinger Banner":{"hardmode":true,"kills_required":50,"category":"Corruption"},"Clown Banner":{"hardmode":true,"kills_required":25,"category":"Blood Moon"},"Cochineal Beetle Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Corite Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Corrupt Bunny Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Corrupt Goldfish Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Corrupt Mimic Banner":{"hardmode":true,"kills_required":25,"category":"Corruption"},"Corrupt Penguin Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Corrupt Slime Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Corruptor Banner":{"hardmode":true,"kills_required":50,"category":"Corruption"},"Crab Banner":{"hardmode":false,"kills_required":50,"category":"Ocean"},"Crawdad Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Crawltipede Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Creature from the Deep Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Crimera Banner":{"hardmode":false,"kills_required":50,"category":"Crimson"},"Crimslime Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Crimson Axe Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Crimson Mimic Banner":{"hardmode":true,"kills_required":25,"category":"Crimson"},"Crystal Thresher Banner":{"hardmode":true,"kills_required":50,"category":"Sandstorm"},"Cursed Hammer Banner":{"hardmode":true,"kills_required":50,"category":"Corruption"},"Cursed Skull Banner":{"hardmode":false,"kills_required":50,"category":"Dungeon"},"Cyan Beetle Banner":{"hardmode":false,"kills_required":50,"category":"Snow"},"Dark Caster Banner":{"hardmode":false,"kills_required":50,"category":"Dungeon"},"Dark Mummy Banner":{"hardmode":true,"kills_required":50,"category":"Corruption"},"Deadly Sphere Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Demon Banner":{"hardmode":false,"kills_required":50,"category":"Underworld"},"Demon Eye Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Derpling Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Desert Spirit Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Devourer Banner":{"hardmode":false,"kills_required":25,"category":"Corruption"},"Diabolist Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Doctor Bones Banner":{"hardmode":false,"kills_required":10,"category":"Jungle"},"Dr Man Fly":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Drakin Banner":{"hardmode":true,"kills_required":100,"category":"Old One's army"},"Drakomire Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Drakomire Rider Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Dreadnautilus Banner":{"hardmode":true,"kills_required":10,"category":"Blood Moon"},"Drippler Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Dune Splicer Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Dungeon Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Dungeon Spirit Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Eater of Souls Banner":{"hardmode":false,"kills_required":50,"category":"Corruption"},"Elf Archer Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Elf Copter Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Enchanted Sword Banner":{"hardmode":true,"kills_required":50,"category":"Hallow"},"Etherian Goblin Banner":{"hardmode":false,"kills_required":1000,"category":"Old One's army"},"Etherian Goblin Bomber Banner":{"hardmode":false,"kills_required":500,"category":"Old One's army"},"Etherian Javelin Thrower Banner":{"hardmode":false,"kills_required":200,"category":"Old One's army"},"Etherian Lightning Bug Banner":{"hardmode":true,"kills_required":50,"category":"Old One's army"},"Etherian Wyvern Banner":{"hardmode":false,"kills_required":200,"category":"Old One's army"},"Evolution Beast Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Eyezor Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Face Monster Banner":{"hardmode":false,"kills_required":50,"category":"Crimson"},"Fire Imp Banner":{"hardmode":false,"kills_required":50,"category":"Underworld"},"Flesh Reaver Banner":{"hardmode":true,"kills_required":50,"category":"Sandstorm"},"Floaty Gross Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Flocko Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Flow Invader Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Flying Fish Banner":{"hardmode":false,"kills_required":50,"category":"Rain"},"Flying Snake Banner":{"hardmode":true,"kills_required":50,"category":"Temple"},"Frankenstein Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Fritz Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Frozen Zombie Banner":{"hardmode":false,"kills_required":50,"category":"Snow"},"Fungi Bulb Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Fungo Fish Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Gastropod Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Ghost Banner":{"hardmode":false,"kills_required":50,"category":"Halloween"},"Ghoul Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Giant Bat Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Giant Cursed Skull Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Giant Flying Fox Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Giant Shelly Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Giant Tortoise Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Gingerbread Man Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Gnome Banner":{"hardmode":false,"kills_required":25,"category":"Cavern"},"Goblin Archer Banner":{"hardmode":false,"kills_required":50,"category":"Goblin Army"},"Goblin Peon Banner":{"hardmode":false,"kills_required":50,"category":"Goblin Army"},"Goblin Scout Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Goblin Sorcerer Banner":{"hardmode":false,"kills_required":50,"category":"Goblin Army"},"Goblin Thief Banner":{"hardmode":false,"kills_required":50,"category":"Goblin Army"},"Goblin Warlock Banner":{"hardmode":true,"kills_required":25,"category":"Goblin Army"},"Goblin Warrior Banner":{"hardmode":false,"kills_required":50,"category":"Goblin Army"},"Goldfish Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Granite Elemental Banner":{"hardmode":false,"kills_required":50,"category":"Granite"},"Granite Golem Banner":{"hardmode":false,"kills_required":50,"category":"Granite"},"Green Jellyfish Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Green Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Hallowed Mimic Banner":{"hardmode":true,"kills_required":25,"category":"Hallow"},"Harpy Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Headless Horseman Banner":{"hardmode":true,"kills_required":50,"category":"Pumkin Moon"},"Hell Armored Bones Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Hellbat Banner":{"hardmode":false,"kills_required":50,"category":"Underworld"},"Hellhound Banner":{"hardmode":true,"kills_required":100,"category":"Pumkin Moon"},"Hemogoblin Shark Banner":{"hardmode":true,"kills_required":25,"category":"Blood Moon"},"Herpling Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Hoplite Banner":{"hardmode":false,"kills_required":50,"category":"Marble"},"Hoppin Jack Banner":{"hardmode":true,"kills_required":50,"category":"Halloween"},"Hornet Banner":{"hardmode":false,"kills_required":50,"category":"Jungle"},"Ice Bat Banner":{"hardmode":false,"kills_required":50,"category":"Snow"},"Ice Elemental Banner":{"hardmode":true,"kills_required":50,"category":"Snow"},"Ice Golem Banner":{"hardmode":true,"kills_required":25,"category":"Rain"},"Ice Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Ice Tortoise Banner":{"hardmode":true,"kills_required":50,"category":"Snow"},"Ichor Sticker Banner":{"hardmode":true,"kills_required":50,"category":"Crimson"},"Icy Merman Banner":{"hardmode":true,"kills_required":50,"category":"Snow"},"Illuminant Bat Banner":{"hardmode":true,"kills_required":50,"category":"Hallow"},"Illuminant Slime Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Jungle Bat Banner":{"hardmode":false,"kills_required":50,"category":"Jungle"},"Jungle Creeper Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Jungle Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Kobold Banner":{"hardmode":true,"kills_required":200,"category":"Old One's army"},"Kobold Glider Banner":{"hardmode":true,"kills_required":100,"category":"Old One's army"},"Krampus Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Lac Beetle Banner":{"hardmode":false,"kills_required":50,"category":"Jungle"},"Lamia Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Lava Bat Banner":{"hardmode":true,"kills_required":50,"category":"Underworld"},"Lava Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Light Mummy Banner":{"hardmode":true,"kills_required":50,"category":"Hallow"},"Lihzahrd Banner":{"hardmode":true,"kills_required":50,"category":"Temple"},"Lunatic Devotee Banner":{"hardmode":true,"kills_required":25,"category":"Lunar"},"Man Eater Banner":{"hardmode":false,"kills_required":50,"category":"Jungle"},"Martian Brainscrambler Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Drone Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Engineer Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Gigazapper Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Gray Grunt Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Officer Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Ray Gunner Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Scutlix Gunner Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Tesla Turret Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Martian Walker Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Medusa Banner":{"hardmode":true,"kills_required":50,"category":"Marble"},"Meteor Head Banner":{"hardmode":false,"kills_required":50,"category":"Meteorite"},"Milkyway Weaver Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Mimic Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Mini Star Cell Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Mister Stabby Banner":{"hardmode":true,"kills_required":50,"category":"Frost Legion"},"Moss Hornet Banner":{"hardmode":true,"kills_required":50,"category":"Jungle"},"Moth Banner":{"hardmode":true,"kills_required":25,"category":"Jungle"},"Mother Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Mothron Banner":{"hardmode":true,"kills_required":25,"category":"Solar Eclipse"},"Mummy Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Mushi Ladybug Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Nailhead Banner":{"hardmode":true,"kills_required":25,"category":"Solar Eclipse"},"Nebula Floater Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Necromancer Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Nutcracker Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Nymph Banner":{"hardmode":false,"kills_required":25,"category":"Cavern"},"Old Ones Skeleton Banner":{"hardmode":false,"kills_required":150,"category":"Old One's army"},"Paladin Banner":{"hardmode":true,"kills_required":25,"category":"Dungeon"},"Parrot Banner":{"hardmode":true,"kills_required":50,"category":"Pirates"},"Penguin Banner":{"hardmode":false,"kills_required":50,"category":"Snow"},"Pigron Banner":{"hardmode":true,"kills_required":50,"category":"Snow"},"Pink Jellyfish Banner":{"hardmode":false,"kills_required":50,"category":"Ocean"},"Pinky Banner":{"hardmode":false,"kills_required":25,"category":"Slimes"},"Piranha Banner":{"hardmode":false,"kills_required":50,"category":"Jungle"},"Pirate Captain Banner":{"hardmode":true,"kills_required":25,"category":"Pirates"},"Pirate Corsair Banner":{"hardmode":true,"kills_required":50,"category":"Pirates"},"Pirate Crossbower Banner":{"hardmode":true,"kills_required":50,"category":"Pirates"},"Pirate Deadeye Banner":{"hardmode":true,"kills_required":50,"category":"Pirates"},"Pirate Deckhand Banner":{"hardmode":true,"kills_required":50,"category":"Pirates"},"Pixie Banner":{"hardmode":true,"kills_required":50,"category":"Hallow"},"Poltergeist Banner":{"hardmode":true,"kills_required":100,"category":"Pumkin Moon"},"Possessed Armor Banner":{"hardmode":true,"kills_required":50,"category":"Surface"},"Predictor Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Present Mimic Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Psycho Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Purple Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Ragged Caster Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Rainbow Slime Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Raincoat Zombie Banner":{"hardmode":false,"kills_required":50,"category":"Rain"},"Raven Banner":{"hardmode":true,"kills_required":50,"category":"Halloween"},"Reaper Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Red Devil Banner":{"hardmode":true,"kills_required":50,"category":"Underworld"},"Red Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Rock Golem Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Rune Wizard Banner":{"hardmode":true,"kills_required":10,"category":"Cavern"},"Rusty Armored Bones Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Salamander Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Sand Elemental Banner":{"hardmode":true,"kills_required":25,"category":"Sandstorm"},"Sand Poacher Banner":{"hardmode":true,"kills_required":50,"category":"Desert"},"Sand Shark Banner":{"hardmode":true,"kills_required":50,"category":"Sandstorm"},"Sand Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Scarecrow Banner":{"hardmode":true,"kills_required":150,"category":"Pumkin Moon"},"Scutlix Banner":{"hardmode":true,"kills_required":50,"category":"Martians"},"Sea Snail Banner":{"hardmode":false,"kills_required":50,"category":"Ocean"},"Selenian Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Shark Banner":{"hardmode":false,"kills_required":50,"category":"Ocean"},"Shimmer Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Skeleton Archer Banner":{"hardmode":true,"kills_required":50,"category":"Cavern"},"Skeleton Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Skeleton Commando Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Skeleton Sniper Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"Slimer Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Snatcher Banner":{"hardmode":false,"kills_required":50,"category":"Jungle"},"Snow Balla Banner":{"hardmode":true,"kills_required":50,"category":"Frost Legion"},"Snow Flinx Banner":{"hardmode":false,"kills_required":50,"category":"Snow"},"Snowman Gangsta Banner":{"hardmode":true,"kills_required":50,"category":"Frost Legion"},"Spiked Ice Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Spiked Jungle Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Splinterling Banner":{"hardmode":true,"kills_required":150,"category":"Pumkin Moon"},"Spore Bat Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Spore Skeleton Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Spore Zombie Banner":{"hardmode":true,"kills_required":50,"category":"Glowing Mushroom"},"Squid Banner":{"hardmode":false,"kills_required":50,"category":"Ocean"},"Sroller Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Star Cell Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Stargazer Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Storm Diver Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Swamp Thing Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Tactical Skeleton Banner":{"hardmode":true,"kills_required":50,"category":"Dungeon"},"The Bride Banner":{"hardmode":false,"kills_required":10,"category":"Blood Moon"},"The Groom Banner":{"hardmode":false,"kills_required":10,"category":"Blood Moon"},"The Possessed Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Tim Banner":{"hardmode":false,"kills_required":10,"category":"Cavern"},"Tomb Crawler Banner":{"hardmode":false,"kills_required":50,"category":"Desert"},"Toxic Sludge Banner":{"hardmode":true,"kills_required":50,"category":"Slimes"},"Twinkle Popper Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Umbrella Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Undead Miner Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Undead Viking Banner":{"hardmode":false,"kills_required":50,"category":"Snow"},"Unicorn Banner":{"hardmode":true,"kills_required":50,"category":"Hallow"},"Vampire Banner":{"hardmode":true,"kills_required":50,"category":"Solar Eclipse"},"Vicious Bunny Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Vicious Goldfish Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Vicious Penguin Banner":{"hardmode":false,"kills_required":50,"category":"Blood Moon"},"Vortexian Banner":{"hardmode":true,"kills_required":50,"category":"Lunar"},"Vulture Banner":{"hardmode":false,"kills_required":50,"category":"Desert"},"Wall Creeper Banner":{"hardmode":false,"kills_required":50,"category":"Spiders"},"Wandering Eye Banner":{"hardmode":true,"kills_required":50,"category":"Surface"},"Wandering Eye Fish Banner":{"hardmode":false,"kills_required":25,"category":"Blood Moon"},"Werewolf Banner":{"hardmode":true,"kills_required":50,"category":"Surface"},"Wither Beast Banner":{"hardmode":true,"kills_required":50,"category":"Old One's army"},"Wolf Banner":{"hardmode":true,"kills_required":50,"category":"Snow"},"World Feeder Banner":{"hardmode":true,"kills_required":50,"category":"Corruption"},"Worm Banner":{"hardmode":false,"kills_required":50,"category":"Cavern"},"Wraith Banner":{"hardmode":true,"kills_required":50,"category":"Surface"},"Wyvern Banner":{"hardmode":true,"kills_required":50,"category":"Surface"},"Yellow Slime Banner":{"hardmode":false,"kills_required":50,"category":"Slimes"},"Yeti Banner":{"hardmode":true,"kills_required":50,"category":"Frost Moon"},"Zombie Banner":{"hardmode":false,"kills_required":50,"category":"Surface"},"Zombie Elf Banner":{"hardmode":true,"kills_required":100,"category":"Frost Moon"},"Zombie Merman Banner":{"hardmode":false,"kills_required":25,"category":"Blood Moon"}};
+		const bannerListDiv = document.getElementById("bannerList");
+		const bannerListHardmodeDiv = document.getElementById("bannerListHardmode");
+		const count_span = document.getElementById('banner-count');
+		const count_done_span = document.getElementById('banner-count-done');
+		const hide_complete = document.getElementById('toggle-hide-complete');
+		const saved = JSON.parse(localStorage.getItem("terrariaBanners") || "{}");
+
+		let count_total = 0;
+		let count_done = 0;
+		let play_victory = false;
+
+		const grouped = {};
+		const grouped_hardmode = {};
+		for(const [key, value] of Object.entries(data)) {
+			const cat = value.category;
+
+			if(value.hardmode) {
+				if(!grouped_hardmode[cat]) grouped_hardmode[cat] = [];
+				grouped_hardmode[cat].push(key);
+			} else {
+				if(!grouped[cat]) grouped[cat] = [];
+				grouped[cat].push(key);
+			}
+		}
+
+		for (const [category, keys] of Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b))) {
+			const div = document.createElement("div");
+			const headline = document.createElement("h3");
+			headline.innerHTML = category;
+			div.appendChild(headline);
+
+			for(const name of keys) {
+				count_total++;
+				const props = data[name];
+				const label = bannerLabel(name, props);
+				div.appendChild(label);
+
+				label.querySelector("input").addEventListener("change", e => {
+					checkVictory();
+					saveToLocalStorage(name, e);
+					if(hide_complete.checked) {
+						hideAllComplete(null);
+					}
+				});
+			}
+
+			bannerListDiv.appendChild(div);
+		}
+		
+		for (const [category, keys] of Object.entries(grouped_hardmode).sort(([a], [b]) => a.localeCompare(b))) {
+			const div = document.createElement("div");
+			const headline = document.createElement("h3");
+			headline.innerHTML = category;
+			div.appendChild(headline);
+
+			for(const name of keys) {
+				const props = data[name];
+				const label = bannerLabel(name, props);
+				div.appendChild(label);
+
+				label.querySelector("input").addEventListener("change", e => {
+					checkVictory();
+					saveToLocalStorage(name, e);
+					if(hide_complete.checked) {
+						hideAllComplete(null);
+					}
+				});
+			}
+
+			bannerListHardmodeDiv.appendChild(div);
+		}
+
+		count_span.innerHTML = count_total;
+		count_done_span.innerHTML = count_done;
+
+		document.addEventListener('DOMContentLoaded', function() {
+			checkVictory();
+
+			const tabs = document.querySelectorAll('.tab-button');
+			tabs.forEach((tab) => {
+				tab.addEventListener('click', function(e) {
+					toggleTab(e.target);
+				});
+			});
+
+			hide_complete.parentNode.addEventListener('click', function(e) {
+				if(e.target.tagName === 'DIV') {
+					hide_complete.checked = !hide_complete.checked;
+				}
+
+				document.getElementById('filter').value = '';
+				document.querySelectorAll('label').forEach(function(l) {
+					l.parentNode.style.display = 'block';
+					l.style.display = 'flex';
+				});
+
+				if(hide_complete.checked) {
+					hideAllComplete(null);
+				}
+			});
+
+			document.getElementById('fileInput').addEventListener('change', function(event) {
+				const file = event.target.files[0];
+				
+				if(!file) return;
+				if(!file.name.endsWith('.txt')) return;
+				
+				const reader = new FileReader();
+				
+				reader.onload = function(e) {
+					const content = e.target.result;
+					const rows = content.split('\n').filter(row => row.trim() !== '');
+					const banners = {};
+					rows.forEach(row => {
+						banners[row.trim()] = 1;
+					});
+					localStorage.setItem('terrariaBanners', JSON.stringify(banners));
+					location.reload();
+				};
+				
+				reader.onerror = function() {
+					console.log("reader error");
+				};
+				
+				reader.readAsText(file);
+				event.target.value = '';
+			});
+
+			document.getElementById('filter').addEventListener('keyup', function(event) {
+				const value = event.target.value;
+				const tab_content = document.querySelector('.tab-content');
+				const divs = tab_content.querySelectorAll('div:not(.banner-list)');
+
+				divs.forEach(function(d) {
+					let count_showing = 0;
+					const labels = d.querySelectorAll('label');
+					labels.forEach(function(l) {
+						l.style.display = 'flex';
+						if(l.getElementsByTagName('span')[0].textContent.toLowerCase().includes(value)) {
+							count_showing += 1;
+						} else {
+							l.style.display = 'none';
+						}
+
+					});
+
+					if(count_showing == 0) {
+						d.style.display = 'none';
+					} else {
+						d.style.display = 'block';
+					}
+
+				});
+
+				if(hide_complete.checked) {
+					hideAllComplete(value);
+				}
+			});
+		});
+
+		function saveToLocalStorage(name, e) {
+			saved[name] = e.target.checked;
+			localStorage.setItem("terrariaBanners", JSON.stringify(saved));
+
+			const current_count = parseInt(count_done_span.innerHTML);
+			if(e.target.checked) {
+				e.target.parentNode.style.color = '#aaaaaa';
+				count_done_span.innerHTML = current_count + 1;
+			} else {
+				e.target.parentNode.style.color = '#ffffff';
+				count_done_span.innerHTML = current_count - 1;
+			}
+
+			if(hide_complete.checked) {
+				e.target.parentNode.style.display = 'none';
+			} else {
+				e.target.parentNode.style.display = 'flex';
+			}
+		}
+
+		function bannerLabel(name, props) {
+
+			const id = name.replace(/\s+/g, "_");
+
+			let url = 'https://terraria.wiki.gg/wiki/';
+			url += name.slice(0, -7);
+
+			const label = document.createElement("label");
+			if(saved[name]) {
+				label.style.color = '#aaaaaa';
+				if(!props.hardmode) {
+					count_done++;
+				}
+			}
+			label.innerHTML = `
+				<input type="checkbox" id="${id}" ${saved[name] ? "checked" : ""}>
+				<span>${name}</span>
+				<span>${props.kills_required} kills</span>
+				<span><a href="${url}" target="_blank">Wiki</a></span>
+			`;
+
+			return label;
+		}
+
+		function downloadCollection() {
+			const banners = Object.keys(saved);
+			const blob = new Blob(
+				[banners.join("\n")],
+				{type: "text/plain"}
+			);
+
+			const a = document.createElement("a");
+			a.href = URL.createObjectURL(blob);
+			a.download = "terraria_banners_collected.txt";
+			a.click();
+		}
+
+		function clearCollection() {
+			if (!confirm("Clear all saved progress?")) return;
+			localStorage.removeItem("terrariaBanners");
+			location.reload();
+		}
+
+		function toggleTab(element) {
+			const tabs = document.querySelectorAll('.tab-button');
+			tabs.forEach((tab) => {
+				tab.classList.remove('active');
+			});
+			element.classList.add('active');
+
+			if(element.innerHTML == 'Hardmode') {
+				bannerListDiv.style.display = 'none';
+				bannerListHardmodeDiv.style.display = 'block';
+				
+				const checkboxes = bannerListHardmodeDiv.querySelectorAll('input');
+				count_span.innerHTML = checkboxes.length;
+
+				let count_complete = 0;
+				checkboxes.forEach(function(obj) {
+					if(obj.checked) {
+						count_complete++;
+					}
+				});
+				count_done_span.innerHTML = count_complete;
+			} else {
+				bannerListDiv.style.display = 'block';
+				bannerListHardmodeDiv.style.display = 'none';
+
+				const checkboxes = bannerListDiv.querySelectorAll('input');
+				count_span.innerHTML = checkboxes.length;
+
+				let count_complete = 0;
+				checkboxes.forEach(function(obj) {
+					if(obj.checked) {
+						count_complete++;
+					}
+				});
+				count_done_span.innerHTML = count_complete;
+			}
+		}
+
+		function loadBackup() {
+			if(!confirm('Are you sure you want to replace the current data with a loaded save?')) return;
+
+            const fileInput = document.getElementById('fileInput');
+            fileInput.click();
+        }
+
+		function hideAllComplete(filter) {
+			bannerListDiv.childNodes.forEach(function(div) {
+				let unfinished = 0;
+				div.childNodes.forEach(function(obj) {
+					if(obj.nodeName == 'H3') return;
+					const r = hideComplete(obj);
+					if(filter === null || obj.getElementsByTagName('span')[0].textContent.toLowerCase().includes(filter)) {
+						unfinished += r ? 0 : 1;
+					}
+				});
+				div.style.display = (unfinished == 0 && hide_complete.checked) ? 'none' : 'block';
+			});
+			
+			bannerListHardmodeDiv.childNodes.forEach(function(div) {
+				let unfinished = 0;
+				div.childNodes.forEach(function(obj) {
+					if(obj.nodeName == 'H3') return;
+					const r = hideComplete(obj);
+					if(filter === null || obj.getElementsByTagName('span')[0].textContent.toLowerCase().includes(filter)) {
+						unfinished += r ? 0 : 1;
+					}
+				});
+
+				div.style.display = (unfinished == 0 && hide_complete.checked) ? 'none' : 'block';
+			});
+		}
+		
+		function hideComplete(obj) {
+			if(obj.querySelector('input').checked) {
+				obj.style.display = 'none';
+				return true;
+			}
+
+			return false;
+		}
+
+		function checkVictory() {
+			const parent = document.querySelector('.tab-content');
+			const uncheckedInputs = parent.querySelectorAll('input[type="checkbox"]:not(:checked)');
+			if(uncheckedInputs.length == 0) {
+				play_victory = true;
+				victory();
+			} else {
+				play_victory = false;
+			}
+		}
+
+		function victory() {
+			const victory_div = document.getElementById('victory');
+			
+			if(play_victory === false) {
+				victory_div.style.display = 'none';
+				return;
+			}
+			
+			victory_div.style.display = 'block';
+
+			setTimeout(() => {
+				const x = Math.ceil(Math.random() * (window.innerWidth-220) + 100);
+				const y = Math.ceil(Math.random() * (window.innerHeight-220) + 100);
+				createParticleBurst(x, y);
+				victory();
+			}, 100);
+		}
+
+        function createParticleBurst(x, y) {
+            const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96e6a1', '#ff00ff', '#00ffff'];
+            
+            for(let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.width = (Math.random() * 10 + 5) + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
+                particle.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
+                
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 3000);
+            }
+
+			const svg = `<svg width="24" height="24" viewBox="0 0 32 32"><polygon points="16,0 20,12 32,12 22,19 26,32 16,24 6,32 10,19 0,12 12,12" fill="yellow" stroke="#ffa500" stroke-width="1"/></svg>`;
+			const star = document.createElement('div');
+            star.innerHTML = svg;
+            star.className = 'star-particle';
+            star.style.left = (x - 12) + 'px';
+            star.style.top = (y - 12) + 'px';
+			document.body.appendChild(star);
+			setTimeout(() => star.remove(), 1500);
+        }
+
+	</script>
+</body>
+</html>
